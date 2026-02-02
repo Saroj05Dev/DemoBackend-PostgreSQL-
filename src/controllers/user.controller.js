@@ -30,19 +30,13 @@ const loginSchema = Joi.object({
 });
 
 export const userController = {
-  async register(req, res) {
+  async register(req, res, next) {
     try {
       const { error, value } = registerSchema.validate(req.body);
       
       if (error) {
-        return res.status(400).json({
-          success: false,
-          message: "Validation error",
-          errors: error.details.map(detail => ({
-            field: detail.path[0],
-            message: detail.message
-          }))
-        });
+        // Pass Joi error to error middleware
+        return next(error);
       }
 
       const result = await userService.register(value);
@@ -53,26 +47,16 @@ export const userController = {
         data: result,
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      next(error); // Pass any error to error middleware
     }
   },
 
-  async login(req, res) {
+  async login(req, res, next) {
     try {
       const { error, value } = loginSchema.validate(req.body);
       
       if (error) {
-        return res.status(400).json({
-          success: false,
-          message: "Validation error",
-          errors: error.details.map(detail => ({
-            field: detail.path[0],
-            message: detail.message
-          }))
-        });
+        return next(error);
       }
 
       const result = await userService.login(value);
@@ -83,23 +67,19 @@ export const userController = {
         data: result,
       });
     } catch (error) {
-      res.status(401).json({
-        success: false,
-        message: error.message,
-      });
+      next(error); // Error middleware handles the status codes
     }
   },
 
-  async getProfile(req, res) {
+  async getProfile(req, res, next) {
     try {
       const { id } = req.params;
       const userId = parseInt(id);
       
       if (isNaN(userId)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid user ID"
-        });
+        const error = new Error("Invalid user ID");
+        error.status = 400;
+        return next(error);
       }
 
       const user = await userService.getProfile(userId);
@@ -109,14 +89,11 @@ export const userController = {
         data: user,
       });
     } catch (error) {
-      res.status(404).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   },
 
-  async getMe(req, res) {
+  async getMe(req, res, next) {
     try {
       const { userId } = req.user;
       const user = await userService.getProfile(userId);
@@ -126,10 +103,7 @@ export const userController = {
         data: user,
       });
     } catch (error) {
-      res.status(404).json({
-        success: false,
-        message: error.message,
-      });
+      next(error);
     }
   },
 };
